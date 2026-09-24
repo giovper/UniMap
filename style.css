@@ -870,3 +870,372 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
   border: 2px solid currentColor;
   animation: pulse-ring 1.5s ease-out infinite;
 }
+
+/* ─── Profile Box (Giovanni & Vicenza) ──────────────────── */
+.profile-box {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(155, 109, 255, 0.08));
+  border: 1px solid var(--border-glow);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.profile-avatar {
+  font-size: 24px;
+}
+.profile-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.profile-sub {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.accent-city {
+  color: var(--accent-cyan);
+  font-weight: 600;
+}
+.vicenza-badge {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(0, 212, 255, 0.12);
+  border-left: 3px solid var(--accent-cyan);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+/* ─── Budget Min/Max & Part-Time ────────────────────────── */
+.budget-inputs-row {
+  display: flex;
+  gap: 10px;
+}
+.budget-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.budget-col label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.budget-col input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.budget-col input:focus {
+  border-color: var(--accent-cyan);
+}
+.part-time-card {
+  margin-top: 10px;
+  background: rgba(0, 229, 160, 0.06);
+  border: 1px solid rgba(0, 229, 160, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  transition: all 0.25s ease;
+}
+.part-time-card.active {
+  background: rgba(0, 229, 160, 0.12);
+  border-color: var(--accent-green);
+  box-shadow: 0 0 15px rgba(0, 229, 160, 0.15);
+}
+.part-time-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-top: 8px;
+  display: none;
+  border-top: 1px dashed rgba(0, 229, 160, 0.25);
+  padding-top: 8px;
+}
+.part-time-card.active .part-time-info {
+  display: block;
+}
+.toggle-sub {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+/* ─── Ambiti Checkboxes Grid ────────────────────────────── */
+.panel-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.panel-title-row .panel-title {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.ambiti-actions {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--accent-cyan);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  font-family: inherit;
+}
+.btn-link:hover {
+  color: white;
+}
+.ambiti-subtext {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+.ambiti-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ambito-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.ambito-item:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-glow);
+}
+.ambito-item.checked {
+  background: rgba(79, 143, 255, 0.16);
+  border-color: var(--accent-blue);
+}
+.ambito-cb {
+  accent-color: var(--accent-blue);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.ambito-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+.ambito-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.06);
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-weight: 600;
+}
+.lang-rule-note {
+  font-size: 10px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+/* ─── Detail Panel Additions ────────────────────────────── */
+.detail-top-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.detail-distance-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  padding: 4px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+/* Lauree Triennali Cards */
+.degrees-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.degree-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s;
+}
+.degree-card:hover {
+  border-color: var(--border-glow);
+}
+.degree-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.degree-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.degree-lang-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.degree-lang-pill.en {
+  background: rgba(0, 212, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+}
+.degree-lang-pill.it {
+  background: rgba(0, 229, 160, 0.15);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 229, 160, 0.35);
+}
+.degree-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.degree-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+.degree-focus {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* Procedure d'Iscrizione & Test d'Ingresso */
+.admission-card {
+  background: rgba(155, 109, 255, 0.05);
+  border: 1px solid rgba(155, 109, 255, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.admission-step-list {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-line;
+  margin-top: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 2px solid var(--accent-violet);
+}
+
+/* Simulatore Finanziario Part-Time */
+.finance-sim {
+  background: rgba(0, 229, 160, 0.06);
+  border: 1px solid rgba(0, 229, 160, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.sim-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  margin-top: 8px;
+}
+.sim-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.sim-divider {
+  border-top: 1px dashed var(--border);
+  margin: 4px 0;
+}
+.sim-result {
+  font-weight: 700;
+  font-size: 12px;
+}
+.sim-result.surplus {
+  color: var(--accent-green);
+}
+.sim-result.deficit {
+  color: var(--accent-amber);
+}
+
+/* Home Marker (Vicenza) */
+.vicenza-home-marker {
+  width: 32px;
+  height: 32px;
+  background: #ffb347;
+  color: #080c18;
+  font-size: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(255, 179, 71, 0.8);
+  border: 2px solid #fff;
+  cursor: pointer;
+  animation: pulse-vicenza 2s infinite;
+}
+@keyframes pulse-vicenza {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 179, 71, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 12px rgba(255, 179, 71, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 179, 71, 0); }
+}
+
+.legend-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.footer-credit {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  padding-top: 6px;
+  line-height: 1.4;
+}
+

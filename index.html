@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UniMap — Esplora le Università Europee</title>
-  <meta name="description" content="Mappa interattiva delle università europee con QS ranking, tasse, costi di vita, requisiti di ammissione e fit score personalizzato. Progettata per studenti ITIS in cerca di università in informatica/ingegneria." />
+  <title>UniMap — Esplora le Università per Giovanni (ITIS Rossi)</title>
+  <meta name="description" content="Mappa interattiva delle università europee con QS 2027 ranking, tasse, costi della vita, lavoro part-time, procedure di iscrizione e lauree triennali in inglese e italiano." />
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -17,9 +17,9 @@
 
 <!-- ── Loading Screen ─────────────────────────────────── -->
 <div id="loading">
-  <div class="loading-logo">🗺️</div>
+  <div class="loading-logo">🎓</div>
   <div class="loading-text">UniMap</div>
-  <div class="loading-sub">Caricamento università europee…</div>
+  <div class="loading-sub">Caricamento università europee e calcolo distanze da Vicenza…</div>
   <div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div>
 </div>
 
@@ -29,7 +29,7 @@
     <div class="nav-logo">🎓</div>
     <div>
       <div class="nav-title">UniMap</div>
-      <div class="nav-subtitle">Università Europee · QS 2027</div>
+      <div class="nav-subtitle">Orientamento Universitario · ITIS Rossi Vicenza · QS 2027</div>
     </div>
   </div>
 
@@ -39,19 +39,19 @@
       <div class="nav-stat-lbl">Università</div>
     </div>
     <div class="nav-stat">
-      <div class="nav-stat-val" id="stat-paesi">—</div>
-      <div class="nav-stat-lbl">Paesi</div>
-    </div>
-    <div class="nav-stat">
       <div class="nav-stat-val" id="stat-visible">—</div>
       <div class="nav-stat-lbl">Visualizzate</div>
+    </div>
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="stat-vicenza-closest">—</div>
+      <div class="nav-stat-lbl">Più Vicina</div>
     </div>
   </div>
 
   <div class="nav-actions">
     <button class="btn-nav active" id="btn-toggle-filters" title="Mostra/nascondi filtri">⚙️ Filtri</button>
     <button class="btn-nav" id="btn-compare-toggle" title="Confronta università">⚖️ Confronta</button>
-    <button class="btn-nav" id="btn-reset-view" title="Ripristina vista">🌍 Reset</button>
+    <button class="btn-nav" id="btn-reset-view" title="Ripristina vista Europa">🌍 Reset Mappa</button>
   </div>
 </nav>
 
@@ -61,94 +61,160 @@
   <!-- Filters Panel -->
   <aside id="filters-panel">
 
-    <div class="panel-section">
-      <div class="panel-title">🔍 Cerca</div>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" placeholder="Nome università o città…" autocomplete="off" />
+    <!-- Profilo Studente & Città Base -->
+    <div class="panel-section profile-box">
+      <div class="profile-header">
+        <div class="profile-avatar">👨‍💻</div>
+        <div>
+          <div class="profile-name">Giovanni Peruzzi</div>
+          <div class="profile-sub">ITIS A. Rossi (5ª Inform.) · <span class="accent-city">📍 Vicenza</span></div>
+        </div>
+      </div>
+      <div class="vicenza-badge">
+        <span>📍 Punto di partenza: <strong>Vicenza</strong> (km e tempi calcolati per ogni ateneo)</span>
       </div>
     </div>
 
+    <!-- Ricerca Testuale -->
     <div class="panel-section">
-      <div class="panel-title">📊 QS Ranking 2027</div>
+      <div class="panel-title">🔍 Cerca Ateneo, Città o Laurea</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Es. Padova, Delft, Robotica, AI, Cyber…" autocomplete="off" />
+      </div>
+    </div>
+
+    <!-- Budget Min / Max & Part-Time Boost -->
+    <div class="panel-section">
+      <div class="panel-title">💸 Budget Mensile & Lavoro Part-Time</div>
+      
+      <div class="budget-inputs-row">
+        <div class="budget-col">
+          <label for="budget-min">Min €/mese</label>
+          <input type="number" id="budget-min" min="0" max="2500" step="50" value="0" />
+        </div>
+        <div class="budget-col">
+          <label for="budget-max">Max Genitori €/mese</label>
+          <input type="number" id="budget-max" min="300" max="2500" step="50" value="800" />
+        </div>
+      </div>
+
+      <div class="range-group" style="margin-top: 8px;">
+        <div class="range-labels">
+          <span>Tetto max: <strong id="budget-lbl">800 €</strong>/mese</span>
+          <span style="color:var(--accent-cyan); font-size:11px">Tuo budget: ~600–800€</span>
+        </div>
+        <input type="range" id="budget-filter" min="400" max="2500" value="800" step="50" />
+      </div>
+
+      <!-- Toggle Lavoro Part-Time con ricalcolo dinamico -->
+      <div class="part-time-card" id="part-time-card">
+        <div class="toggle-row" style="margin-bottom: 4px;">
+          <div class="toggle-label-wrap">
+            <span class="toggle-label" style="font-weight: 700; color: var(--accent-green);">💼 Voglio lavorare part-time</span>
+            <span class="toggle-sub">10–15h/sett. + sussidi statali (SU danese, Minijob, DUO)</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="toggle-part-time" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="part-time-info" id="part-time-info">
+          💡 <strong>Ricalcolo attivo:</strong> aggiunge lo stipendio part-time locale (~400€–900€) ed eventuali sussidi per studenti EU (es. borsa statale danese SU +850€/mese) al tuo budget familiare, sbloccando gli atenei esteri!
+        </div>
+      </div>
+    </div>
+
+    <!-- Ambiti di Studio / Facoltà (8 Flag) -->
+    <div class="panel-section">
+      <div class="panel-title-row">
+        <div class="panel-title">🎯 Ambiti di Studio di Interesse</div>
+        <div class="ambiti-actions">
+          <button type="button" class="btn-link" id="btn-select-all-ambiti">Tutti</button>
+          <span>·</span>
+          <button type="button" class="btn-link" id="btn-clear-ambiti">Azzera</button>
+        </div>
+      </div>
+      <div class="ambiti-subtext">Seleziona uno o più ambiti: mostreremo solo le uni che offrono triennali in almeno uno dei settori scelti.</div>
+
+      <div class="ambiti-grid" id="ambiti-checkboxes">
+        <!-- Generati dinamicamente da app.js -->
+      </div>
+    </div>
+
+    <!-- Lingua Triennale (Solo Inglese o Italiano) -->
+    <div class="panel-section">
+      <div class="panel-title">🗣️ Lingua Corsi Triennali (BSc)</div>
+      <div class="toggle-row">
+        <span class="toggle-label">🇬🇧 Corsi Triennali in <strong>Inglese</strong></span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-english" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">🇮🇹 Corsi Triennali in <strong>Italiano</strong></span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-italian" checked />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="lang-rule-note">
+        ⚠️ <em>Nessun corso in sole lingue locali estere (no tedesco/francese/ecc.): sono incluse solo lauree erogate in Inglese o Italiano.</em>
+      </div>
+    </div>
+
+    <!-- QS Ranking 2027 Slider -->
+    <div class="panel-section">
+      <div class="panel-title">📊 QS World Ranking 2027</div>
       <div class="range-group">
         <div class="range-labels">
           <span>Top <span id="qs-min-lbl">1</span></span>
-          <span>Mostra fino a: <span id="qs-max-lbl">500</span>°</span>
+          <span>Mostra fino a: <strong id="qs-max-lbl">700</strong>°</span>
         </div>
-        <input type="range" id="qs-filter" min="1" max="500" value="500" step="1" />
+        <input type="range" id="qs-filter" min="1" max="700" value="700" step="1" />
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-title">💸 Budget Mensile Stimato</div>
-      <div class="range-group">
-        <div class="range-labels">
-          <span>Max €/mese: <span id="budget-lbl">2.000</span></span>
-          <span style="color:var(--text-muted); font-size:10px">tuo: ~800€</span>
-        </div>
-        <input type="range" id="budget-filter" min="600" max="2000" value="2000" step="50" />
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🌍 Paese</div>
-      <div class="tags-grid" id="country-tags"></div>
-    </div>
-
-    <div class="panel-section">
-      <div class="panel-title">🗣️ Lingua di insegnamento</div>
-      <div class="toggle-row">
-        <span class="toggle-label">Solo triennali in inglese</span>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-english" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-      <div class="toggle-row">
-        <span class="toggle-label">Solo università gratuite (EU)</span>
-        <label class="toggle">
-          <input type="checkbox" id="toggle-free" />
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-    </div>
-
+    <!-- Status & Azzera Filtri -->
     <div class="panel-section">
       <div class="results-badge">
         <div><strong id="filtered-count">—</strong></div>
         <div>università visibili</div>
       </div>
-      <button class="btn-clear" id="btn-clear-filters">✕ Azzera filtri</button>
+      <button class="btn-clear" id="btn-clear-filters">✕ Azzera tutti i filtri</button>
     </div>
 
-    <!-- Legend mini -->
+    <!-- Legenda QS e Fit -->
     <div class="panel-section">
-      <div class="panel-title">🟢 Legenda colori QS</div>
-      <div style="display:flex;flex-direction:column;gap:6px;">
-        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top50)"></div><span>Top 50 mondiale</span></div>
+      <div class="panel-title">🟢 Legenda Colori QS Ranking</div>
+      <div class="legend-grid">
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top50)"></div><span>Top 50 Mondiale</span></div>
         <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top150)"></div><span>Top 51–150</span></div>
         <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top300)"></div><span>Top 151–300</span></div>
-        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top500)"></div><span>Top 301–500</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top500)"></div><span>Top 301–700</span></div>
       </div>
     </div>
 
-    <div style="font-size:10px;color:var(--text-muted);text-align:center;padding-top:4px;">
-      🎓 Progettato per Giovanni · ITIS Rossi, Vicenza<br/>
-      Dati QS World University Rankings 2027
+    <div class="footer-credit">
+      🎓 Personalizzato per Giovanni Peruzzi · ITIS Rossi, Vicenza<br/>
+      Dati QS World University Rankings 2027 · Portali Nazionali di Ammissione
     </div>
 
   </aside>
 
-  <!-- Map -->
+  <!-- Map Container -->
   <div id="map-container">
     <div id="map"></div>
 
-    <!-- Floating detail panel -->
+    <!-- Floating Detail Panel -->
     <aside id="detail-panel">
       <div class="detail-header" id="detail-header">
-        <button class="detail-close" id="detail-close">✕</button>
-        <div class="detail-flag" id="d-flag"></div>
+        <button class="detail-close" id="detail-close" title="Chiudi scheda">✕</button>
+        <div class="detail-top-meta">
+          <div class="detail-flag" id="d-flag"></div>
+          <div class="detail-distance-badge" id="d-distance-badge"></div>
+        </div>
         <div class="detail-name" id="d-name"></div>
         <div class="detail-location" id="d-location"></div>
         <div class="detail-qs-badge" id="d-qs-badge"></div>
@@ -162,10 +228,10 @@
 
 <!-- ── Compare Bar ─────────────────────────────────────── -->
 <div id="compare-bar">
-  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">⚖️ Confronta:</span>
-  <div class="compare-slot" id="cmp-slot-0">Clicca una università sulla mappa</div>
-  <div class="compare-slot" id="cmp-slot-1">Clicca una seconda università</div>
-  <div class="compare-slot" id="cmp-slot-2">Terza (opzionale)</div>
+  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">⚖️ Confronto Atenei:</span>
+  <div class="compare-slot" id="cmp-slot-0">Clicca un ateneo sulla mappa</div>
+  <div class="compare-slot" id="cmp-slot-1">Secondo ateneo</div>
+  <div class="compare-slot" id="cmp-slot-2">Terzo (opzionale)</div>
   <button class="btn-compare" id="btn-do-compare" disabled>Confronta →</button>
   <button class="btn-nav" id="btn-close-compare" style="flex-shrink:0">✕</button>
 </div>
@@ -174,10 +240,12 @@
 <div id="cmp-modal">
   <div class="cmp-inner">
     <div class="cmp-header">
-      <h2>⚖️ Confronto università</h2>
+      <h2>⚖️ Confronto Università Dettagliato</h2>
       <button class="cmp-close" id="cmp-modal-close">✕</button>
     </div>
-    <table class="cmp-table" id="cmp-table"></table>
+    <div class="cmp-table-wrap">
+      <table class="cmp-table" id="cmp-table"></table>
+    </div>
   </div>
 </div>
 
