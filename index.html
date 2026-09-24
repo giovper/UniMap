@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniMap — Esplora le Università Europee</title>
+  <meta name="description" content="Mappa interattiva delle università europee con QS ranking, tasse, costi di vita, requisiti di ammissione e fit score personalizzato. Progettata per studenti ITIS in cerca di università in informatica/ingegneria." />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+<!-- ── Loading Screen ─────────────────────────────────── -->
+<div id="loading">
+  <div class="loading-logo">🗺️</div>
+  <div class="loading-text">UniMap</div>
+  <div class="loading-sub">Caricamento università europee…</div>
+  <div class="loading-bar-wrap"><div class="loading-bar-fill"></div></div>
+</div>
+
+<!-- ── Navbar ─────────────────────────────────────────── -->
+<nav id="navbar">
+  <div class="nav-brand">
+    <div class="nav-logo">🎓</div>
+    <div>
+      <div class="nav-title">UniMap</div>
+      <div class="nav-subtitle">Università Europee · QS 2027</div>
+    </div>
+  </div>
+
+  <div class="nav-stats">
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="stat-total">—</div>
+      <div class="nav-stat-lbl">Università</div>
+    </div>
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="stat-paesi">—</div>
+      <div class="nav-stat-lbl">Paesi</div>
+    </div>
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="stat-visible">—</div>
+      <div class="nav-stat-lbl">Visualizzate</div>
+    </div>
+  </div>
+
+  <div class="nav-actions">
+    <button class="btn-nav active" id="btn-toggle-filters" title="Mostra/nascondi filtri">⚙️ Filtri</button>
+    <button class="btn-nav" id="btn-compare-toggle" title="Confronta università">⚖️ Confronta</button>
+    <button class="btn-nav" id="btn-reset-view" title="Ripristina vista">🌍 Reset</button>
+  </div>
+</nav>
+
+<!-- ── Main App ────────────────────────────────────────── -->
+<div id="app">
+
+  <!-- Filters Panel -->
+  <aside id="filters-panel">
+
+    <div class="panel-section">
+      <div class="panel-title">🔍 Cerca</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Nome università o città…" autocomplete="off" />
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">📊 QS Ranking 2027</div>
+      <div class="range-group">
+        <div class="range-labels">
+          <span>Top <span id="qs-min-lbl">1</span></span>
+          <span>Mostra fino a: <span id="qs-max-lbl">500</span>°</span>
+        </div>
+        <input type="range" id="qs-filter" min="1" max="500" value="500" step="1" />
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">💸 Budget Mensile Stimato</div>
+      <div class="range-group">
+        <div class="range-labels">
+          <span>Max €/mese: <span id="budget-lbl">2.000</span></span>
+          <span style="color:var(--text-muted); font-size:10px">tuo: ~800€</span>
+        </div>
+        <input type="range" id="budget-filter" min="600" max="2000" value="2000" step="50" />
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">🌍 Paese</div>
+      <div class="tags-grid" id="country-tags"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">🗣️ Lingua di insegnamento</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Solo triennali in inglese</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-english" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Solo università gratuite (EU)</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-free" />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="results-badge">
+        <div><strong id="filtered-count">—</strong></div>
+        <div>università visibili</div>
+      </div>
+      <button class="btn-clear" id="btn-clear-filters">✕ Azzera filtri</button>
+    </div>
+
+    <!-- Legend mini -->
+    <div class="panel-section">
+      <div class="panel-title">🟢 Legenda colori QS</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top50)"></div><span>Top 50 mondiale</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top150)"></div><span>Top 51–150</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top300)"></div><span>Top 151–300</span></div>
+        <div class="legend-row"><div class="legend-dot" style="background:var(--qs-top500)"></div><span>Top 301–500</span></div>
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:var(--text-muted);text-align:center;padding-top:4px;">
+      🎓 Progettato per Giovanni · ITIS Rossi, Vicenza<br/>
+      Dati QS World University Rankings 2027
+    </div>
+
+  </aside>
+
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map"></div>
+
+    <!-- Floating detail panel -->
+    <aside id="detail-panel">
+      <div class="detail-header" id="detail-header">
+        <button class="detail-close" id="detail-close">✕</button>
+        <div class="detail-flag" id="d-flag"></div>
+        <div class="detail-name" id="d-name"></div>
+        <div class="detail-location" id="d-location"></div>
+        <div class="detail-qs-badge" id="d-qs-badge"></div>
+      </div>
+      <div class="detail-body" id="detail-body"></div>
+    </aside>
+
+  </div>
+
+</div>
+
+<!-- ── Compare Bar ─────────────────────────────────────── -->
+<div id="compare-bar">
+  <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;">⚖️ Confronta:</span>
+  <div class="compare-slot" id="cmp-slot-0">Clicca una università sulla mappa</div>
+  <div class="compare-slot" id="cmp-slot-1">Clicca una seconda università</div>
+  <div class="compare-slot" id="cmp-slot-2">Terza (opzionale)</div>
+  <button class="btn-compare" id="btn-do-compare" disabled>Confronta →</button>
+  <button class="btn-nav" id="btn-close-compare" style="flex-shrink:0">✕</button>
+</div>
+
+<!-- ── Compare Modal ───────────────────────────────────── -->
+<div id="cmp-modal">
+  <div class="cmp-inner">
+    <div class="cmp-header">
+      <h2>⚖️ Confronto università</h2>
+      <button class="cmp-close" id="cmp-modal-close">✕</button>
+    </div>
+    <table class="cmp-table" id="cmp-table"></table>
+  </div>
+</div>
+
+<!-- ── Toast ──────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
