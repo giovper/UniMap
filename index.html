@@ -49,6 +49,7 @@
   </div>
 
   <div class="nav-actions">
+    <button class="btn-nav btn-highlight" id="btn-open-summary-table" title="Mostra tabella di tutte le uni visibili con i filtri attivi">📊 Tabella (<span id="table-btn-count">55</span>)</button>
     <button class="btn-nav active" id="btn-toggle-filters" title="Mostra/nascondi filtri">⚙️ Filtri</button>
     <button class="btn-nav" id="btn-compare-toggle" title="Confronta università">⚖️ Confronta</button>
     <button class="btn-nav" id="btn-reset-view" title="Ripristina vista Europa">🌍 Reset Mappa</button>
@@ -182,6 +183,7 @@
         <div><strong id="filtered-count">—</strong></div>
         <div>università visibili</div>
       </div>
+      <button class="btn-table-action" id="btn-open-table-panel" title="Visualizza la tabella comparativa di tutti gli atenei filtrati con export CSV">📊 Tabella Atenei & Export CSV</button>
       <button class="btn-clear" id="btn-clear-filters">✕ Azzera tutti i filtri</button>
     </div>
 
@@ -245,6 +247,66 @@
     </div>
     <div class="cmp-table-wrap">
       <table class="cmp-table" id="cmp-table"></table>
+    </div>
+  </div>
+</div>
+
+<!-- ── Summary Table Modal ─────────────────────────────── -->
+<div id="summary-table-modal" class="table-modal-backdrop">
+  <div class="table-modal-container">
+    <div class="table-modal-header">
+      <div class="table-modal-title-wrap">
+        <h2>📊 Tabella Comparativa Atenei Selezionati</h2>
+        <span class="table-modal-subtitle">
+          <strong id="table-modal-count">55</strong> atenei visibili sulla mappa secondo i filtri attivi · Clicca sulle colonne per ordinare
+        </span>
+      </div>
+      <div class="table-modal-actions">
+        <div class="table-search-wrap">
+          <span class="table-search-icon">🔍</span>
+          <input type="text" id="table-quick-search" placeholder="Filtra tabella (nome, città, paese...)" autocomplete="off" />
+        </div>
+        <button id="btn-export-csv" class="btn-export-csv" title="Esporta dati tabella in formato CSV per Excel">
+          📥 Scarica CSV
+        </button>
+        <button class="table-modal-close" id="btn-close-table-modal" title="Chiudi tabella">✕</button>
+      </div>
+    </div>
+
+    <div class="table-modal-toolbar">
+      <div class="table-info-chips">
+        <span class="chip-item">💡 Clicca sull'intestazione per ordinare (A-Z, ranking, costi, bilancio...)</span>
+        <span class="chip-item">💰 <strong>Bilancio mese:</strong> (Stipendio + Bonus) - Costi totali mese (<strong>100% autonomo</strong>, no soldi genitori)</span>
+        <span class="chip-item">📍 Clicca su qualsiasi riga per volare all'ateneo sulla mappa e aprire la scheda completa</span>
+      </div>
+    </div>
+
+    <div class="table-modal-scroll" id="summary-table-scroll">
+      <table class="summary-table" id="summary-table">
+        <thead>
+          <tr>
+            <th data-sort="nome" class="col-sortable">Nome Ateneo <span class="sort-icon">⇅</span></th>
+            <th data-sort="citta" class="col-sortable">Città <span class="sort-icon">⇅</span></th>
+            <th data-sort="paese" class="col-sortable">Paese <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs2027" class="col-sortable col-num">Classifica QS <span class="sort-icon">⇅</span></th>
+            <th data-sort="fit_score" class="col-sortable col-num">Fit Score <span class="sort-icon">⇅</span></th>
+            <th data-sort="tasse_anno_num" class="col-sortable col-num">Tasse Anno <span class="sort-icon">⇅</span></th>
+            <th data-sort="costi_totali_mese" class="col-sortable col-num" title="Spese mensili vive + (Tasse anno / 12)">Costi Tot. Mese <span class="sort-icon">⇅</span></th>
+            <th data-sort="stipendio_possibile" class="col-sortable col-num" title="Stima retribuzione part-time 10-15h/sett.">Stipendio Poss. <span class="sort-icon">⇅</span></th>
+            <th data-sort="bonus_eventuali" class="col-sortable col-num" title="Sussidi statali EU (SU danese, Minijob, DUO, ecc.)">Bonus Eventuali <span class="sort-icon">⇅</span></th>
+            <th data-sort="bilancio_mese_autonomo" class="col-sortable col-num" title="Entrate (Lavoro + Bonus) - Costi Totali Mese (Senza aiuti genitori)">Bilancio Mese (No Genitori) <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_size" class="col-sortable col-center">Size <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_ar_score" class="col-sortable col-num" title="Academic Reputation (Punteggio QS 2027)">Rep. Accademica <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_er_score" class="col-sortable col-num" title="Employer Reputation (Punteggio QS 2027)">Rep. Datore Lavoro <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_isr_score" class="col-sortable col-num" title="International Students Ratio (Punteggio QS 2027)">Studenti Internaz. <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_eo_score" class="col-sortable col-num" title="Employment Outcomes (Punteggio QS 2027)">Risultati Occupaz. <span class="sort-icon">⇅</span></th>
+            <th data-sort="qs_fsr_score" class="col-sortable col-num" title="Faculty Student Ratio (Punteggio QS 2027)">Rapp. Docenti/Stud. <span class="sort-icon">⇅</span></th>
+          </tr>
+        </thead>
+        <tbody id="summary-table-body">
+          <!-- Popolato dinamicamente da app.js -->
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

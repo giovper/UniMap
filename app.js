@@ -37,6 +37,12 @@ let selectedId = null;
 let compareList = [];         // Max 3 ID
 let compareMode = false;
 
+// Stato Tabella Comparativa
+let summaryTableOpen = false;
+let tableSortCol = 'qs2027';  // Ordinamento di default per Classifica QS 2027
+let tableSortAsc = true;
+let tableSearchQuery = '';
+
 let filters = {
   search: '',
   budgetMin: 0,
@@ -409,12 +415,55 @@ function initFiltersUI() {
   document.getElementById('detail-close')?.addEventListener('click', deselectAll);
 
   // Compare toggles
-  document.getElementById('btn-compare-toggle')?.addEventListener('click', toggleCompareMode);
+  document.getElementById('btn-compare-toggle')?.addEventListener('click', () => {
+    if (compareList.length >= 2) {
+      showCompareModal();
+    } else {
+      toggleCompareMode();
+    }
+  });
   document.getElementById('btn-close-compare')?.addEventListener('click', () => setCompareMode(false));
   document.getElementById('btn-do-compare')?.addEventListener('click', showCompareModal);
   document.getElementById('cmp-modal-close')?.addEventListener('click', hideCompareModal);
   document.getElementById('cmp-modal')?.addEventListener('click', (e) => {
     if (e.target.id === 'cmp-modal') hideCompareModal();
+  });
+
+  // Eventi Tabella Comparativa
+  document.getElementById('btn-open-summary-table')?.addEventListener('click', openSummaryTable);
+  document.getElementById('btn-open-table-panel')?.addEventListener('click', openSummaryTable);
+  document.getElementById('btn-close-table-modal')?.addEventListener('click', closeSummaryTable);
+  document.getElementById('summary-table-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'summary-table-modal') closeSummaryTable();
+  });
+  document.getElementById('table-quick-search')?.addEventListener('input', (e) => {
+    tableSearchQuery = e.target.value.toLowerCase().trim();
+    renderSummaryTable();
+  });
+  document.getElementById('btn-export-csv')?.addEventListener('click', exportTableToCSV);
+
+  // Click sulle colonne per ordinamento
+  document.querySelectorAll('#summary-table th[data-sort]').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.getAttribute('data-sort');
+      if (tableSortCol === col) {
+        tableSortAsc = !tableSortAsc;
+      } else {
+        tableSortCol = col;
+        // Di default: QS rank e tasse crescente, gli score (fit, ar, er, ecc.) decrescenti
+        const defaultDescCols = ['fit_score', 'stipendio_possibile', 'bonus_eventuali', 'bilancio_mese_autonomo', 'qs_ar_score', 'qs_er_score', 'qs_isr_score', 'qs_eo_score', 'qs_fsr_score'];
+        tableSortAsc = !defaultDescCols.includes(col);
+      }
+      renderSummaryTable();
+    });
+  });
+
+  // Chiusura con ESC per tutti i modali
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (summaryTableOpen) closeSummaryTable();
+      if (compareMode) hideCompareModal();
+    }
   });
 }
 
@@ -536,6 +585,7 @@ function applyFilters() {
     }
 
     // Applicazione visibilità marker Leaflet
+    uni._visible = show;
     if (show) {
       el.classList.remove('hidden');
       visible++;
@@ -551,10 +601,19 @@ function applyFilters() {
   const totalEl = document.getElementById('stat-total');
   const visibleEl = document.getElementById('stat-visible');
   const filteredCountEl = document.getElementById('filtered-count');
+  const tableBtnCountEl = document.getElementById('table-btn-count');
+  const tableModalCountEl = document.getElementById('table-modal-count');
 
   if (totalEl) totalEl.textContent = UNIVERSITIES.length;
   if (visibleEl) visibleEl.textContent = visible;
   if (filteredCountEl) filteredCountEl.textContent = visible;
+  if (tableBtnCountEl) tableBtnCountEl.textContent = visible;
+  if (tableModalCountEl) tableModalCountEl.textContent = visible;
+
+  // Se la tabella è attualmente aperta, aggiorna la vista in tempo reale
+  if (summaryTableOpen) {
+    renderSummaryTable();
+  }
 }
 
 function updateClosestStat() {
@@ -765,10 +824,10 @@ function buildDetailBody(uni) {
 
   // Pulsante Confronto
   const addBtn = compareList.includes(uni.id)
-    ? `<button class="btn-nav active" onclick="removeFromCompare('${uni.id}')" style="width:100%;margin-bottom:8px">✕ Rimuovi dal confronto</button>`
+    ? `<button class="btn-nav active" onclick="removeFromCompare('${uni.id}')" style="width:100%;margin-bottom:8px">✕ Rimuovi dal confronto (${compareList.length}/3)</button>`
     : compareList.length < 3
-      ? `<button class="btn-nav" onclick="addToCompare('${uni.id}')" style="width:100%;margin-bottom:8px">⚖️ Aggiungi al confronto</button>`
-      : '';
+      ? `<button class="btn-nav" onclick="addToCompare('${uni.id}')" style="width:100%;margin-bottom:8px">⚖️ Aggiungi al confronto (${compareList.length}/3)</button>`
+      : `<button class="btn-nav" onclick="showCompareModal()" style="width:100%;margin-bottom:8px;background:linear-gradient(135deg,rgba(155,109,255,0.3),rgba(79,143,255,0.3));border-color:var(--accent-violet);font-weight:700;">⚖️ Apri Confronto Completo (3/3) →</button>`;
 
   return `
     <!-- Fit Score Personalizzato -->
@@ -908,33 +967,84 @@ function setCompareMode(val) {
   const bar = document.getElementById('compare-bar');
   const btn = document.getElementById('btn-compare-toggle');
   if (compareMode) {
-    bar.classList.add('visible');
-    btn.classList.add('active');
-    showToast("Modalità confronto attiva: seleziona fino a 3 università");
+    if (bar) {
+      bar.classList.add('visible');
+      bar.classList.add('open');
+    }
+    if (btn) btn.classList.add('active');
+    if (compareList.length === 0) {
+      showToast("⚖️ Modalità confronto attiva: clicca fino a 3 università sulla mappa");
+    }
   } else {
-    bar.classList.remove('visible');
-    btn.classList.remove('active');
+    if (bar) {
+      bar.classList.remove('visible');
+      bar.classList.remove('open');
+    }
+    if (btn) btn.classList.remove('active');
   }
   updateCompareSlots();
+  updateCompareMarkers();
+}
+
+function updateCompareMarkers() {
+  Object.keys(markers).forEach(id => {
+    const el = getMarkerEl(id);
+    if (!el) return;
+    if (compareList.includes(id)) {
+      el.classList.add('in-compare');
+    } else {
+      el.classList.remove('in-compare');
+    }
+  });
 }
 
 function addToCompare(id) {
-  if (compareList.includes(id)) return;
-  if (compareList.length >= 3) {
-    showToast("Puoi confrontare al massimo 3 università contemporaneamente");
+  if (compareList.includes(id)) {
+    showToast("Questo ateneo è già nella lista di confronto");
     return;
   }
+  if (compareList.length >= 3) {
+    showToast("⚠️ Massimo 3 università consentite! Apertura confronto in corso...");
+    showCompareModal();
+    return;
+  }
+
   compareList.push(id);
   setCompareMode(true);
   updateCompareSlots();
+  updateCompareMarkers();
   if (selectedId) openDetail(selectedId);
-  showToast(`Aggiunta al confronto (${compareList.length}/3)`);
+
+  // Se l'utente ha selezionato 3 università, apri automaticamente il confronto!
+  if (compareList.length === 3) {
+    showToast("🎯 3 università selezionate! Apertura confronto in corso...");
+    setTimeout(() => {
+      showCompareModal();
+    }, 350);
+  } else if (compareList.length === 2) {
+    showToast(`⚖️ Aggiunta 2ª università (${compareList.length}/3)! Clicca "Confronta" in basso o scegline una terza.`);
+  } else {
+    showToast(`⚖️ Aggiunta al confronto (${compareList.length}/3). Clicca un altro ateneo sulla mappa!`);
+  }
 }
 
 function removeFromCompare(id) {
   compareList = compareList.filter(i => i !== id);
   updateCompareSlots();
+  updateCompareMarkers();
   if (selectedId) openDetail(selectedId);
+
+  // Se il modale di confronto è aperto, aggiornalo istantaneamente
+  const modal = document.getElementById('cmp-modal');
+  if (modal && modal.classList.contains('open')) {
+    if (compareList.length < 2) {
+      hideCompareModal();
+      showToast("Meno di 2 università selezionate. Il confronto richiede almeno 2 atenei.");
+    } else {
+      const table = document.getElementById('cmp-table');
+      if (table) table.innerHTML = buildCompareTable();
+    }
+  }
 }
 
 function toggleCompareSlot(id) {
@@ -955,20 +1065,31 @@ function updateCompareSlots() {
       slot.className = 'compare-slot filled';
       slot.innerHTML = `
         <span class="slot-name">${uni.bandiera} ${uni.nome}</span>
-        <button class="slot-remove" onclick="event.stopPropagation(); removeFromCompare('${id}')">✕</button>
+        <button class="slot-remove" onclick="event.stopPropagation(); removeFromCompare('${id}')" title="Rimuovi dal confronto">✕</button>
       `;
     } else {
       slot.className = 'compare-slot';
-      slot.innerHTML = i === 0 ? 'Clicca un ateneo sulla mappa' : i === 1 ? 'Secondo ateneo' : 'Terzo (opzionale)';
+      slot.innerHTML = i === 0 ? '① Clicca 1° ateneo sulla mappa' : i === 1 ? '② Clicca 2° ateneo' : '③ Clicca 3° ateneo (opzionale)';
     }
   }
 
   const btnDo = document.getElementById('btn-do-compare');
-  if (btnDo) btnDo.disabled = compareList.length < 2;
+  if (btnDo) {
+    btnDo.disabled = compareList.length < 2;
+    btnDo.textContent = compareList.length >= 2 ? `Confronta (${compareList.length}/3) →` : 'Confronta (min. 2) →';
+    if (compareList.length >= 2) {
+      btnDo.classList.add('pulse-glow');
+    } else {
+      btnDo.classList.remove('pulse-glow');
+    }
+  }
 }
 
 function showCompareModal() {
-  if (compareList.length < 2) return;
+  if (compareList.length < 2) {
+    showToast("Seleziona almeno 2 università sulla mappa per confrontarle");
+    return;
+  }
   const modal = document.getElementById('cmp-modal');
   const table = document.getElementById('cmp-table');
   table.innerHTML = buildCompareTable();
@@ -985,25 +1106,36 @@ function buildCompareTable() {
   const rows = [
     { label: "Posizione & Paese", fn: u => `<strong>${u.bandiera} ${u.citta}</strong> (${u.paese})` },
     { label: "Distanza da Vicenza", fn: u => `<span style="color:var(--accent-cyan); font-weight:700;">${u.distanza_vicenza_km} km</span><br/><span style="font-size:10px; color:var(--text-muted);">${u.viaggio_vicenza}</span>` },
-    { label: "QS Ranking 2027", fn: u => `<strong style="color:${QS_COLOR(u.qs2027)}">#${u.qs2027}</strong>` },
-    { label: "🎯 Fit Score", fn: u => `<strong style="color:${FIT_COLOR(u.fit_score)}">${u.fit_score}/10</strong>` },
-    { label: "Tasse Universitarie", fn: u => `<span class="${u.tasse_annue_eu.includes('0 €') || u.tasse_annue_eu.includes('GRATIS') ? 'success' : ''}">${u.tasse_annue_eu}</span>` },
-    { label: "Affitto Medio / Mese", fn: u => u.affitto_mensile },
-    { label: "Costo Vita Totale / Mese", fn: u => `<strong style="color:var(--accent-cyan)">${u.costo_vita_totale}</strong>` },
-    { label: "Lavoro Part-Time & Sussidi", fn: u => {
-      const c = LAVORO_PAESE[u.paese];
-      return c ? `~${c.guadagno_mensile_stima}<br/><span style="font-size:10px;color:var(--accent-green);">${c.sussidio_statale_nome}</span>` : '—';
-    }},
-    { label: "Lingua Triennale", fn: u => u.has_english_bachelor && u.has_italian_bachelor ? '🇬🇧 Inglese + 🇮🇹 Italiano' : u.has_english_bachelor ? '🇬🇧 Inglese' : '🇮🇹 Italiano' },
-    { label: "Test d'Ingresso", fn: u => `<span style="font-weight:600;color:var(--accent-amber)">${u.ammissione?.test_richiesto || 'Dossier'}</span>` },
+    { label: "Classifica QS 2027", fn: u => `<strong class="table-badge-qs" style="color:${QS_COLOR(u.qs2027)}; border:1px solid ${QS_COLOR(u.qs2027)}44;">#${u.qs2027}</strong>` },
+    { label: "🎯 Fit Score Giovanni", fn: u => `<strong class="table-badge-fit" style="color:${FIT_COLOR(u.fit_score)}; font-size:14px;">${u.fit_score}</strong><span style="font-size:10px;color:var(--text-muted)">/10</span><br/><span style="font-size:10px;color:var(--text-muted);line-height:1.2;display:block;margin-top:3px;">${u.fit_note || ''}</span>` },
+    { label: "Tasse Universitarie / Anno", fn: u => u.tasse_anno_num === 0 ? `<span class="table-badge-zero" style="font-size:13px;">0 € <small>(Gratis)</small></span>` : `<strong style="font-size:13px;">${u.tasse_anno_num.toLocaleString('it-IT')} €</strong>` },
+    { label: "Costi Totali / Mese", fn: u => `<strong style="color:var(--accent-cyan); font-size:13px;">${u.costi_totali_mese.toLocaleString('it-IT')} €/m</strong><br/><span style="font-size:10px;color:var(--text-muted);">spese vive (~${u.spese_mensili_base}€) + ${u.quota_tasse_mese}€ tasse</span>` },
+    { label: "Stipendio Part-Time (10-15h)", fn: u => `<strong>~${u.stipendio_possibile.toLocaleString('it-IT')} €/mese</strong><br/><span style="font-size:10px;color:var(--text-muted);">part-time studente locale</span>` },
+    { label: "Bonus / Sussidi Statali EU", fn: u => u.bonus_eventuali > 0 ? `<strong style="color:var(--accent-green);font-size:13px;">+${u.bonus_eventuali.toLocaleString('it-IT')} €/mese</strong><br/><span style="font-size:10px;color:var(--accent-green);">${u.bonus_nome}</span>` : `<span style="color:var(--text-muted);">Nessun sussidio extra</span>` },
+    { label: "💰 Bilancio Mese (No Genitori)", fn: u => u.bilancio_mese_autonomo >= 0 ? `<span class="table-badge-surplus" style="font-size:13px;">+${u.bilancio_mese_autonomo.toLocaleString('it-IT')} €/m</span><br/><span style="font-size:10px;color:var(--accent-green);font-weight:600;">Surplus autonomo ✓</span>` : `<span class="table-badge-deficit" style="font-size:13px;">${u.bilancio_mese_autonomo.toLocaleString('it-IT')} €/m</span><br/><span style="font-size:10px;color:var(--accent-red);">Fabbisogno per coprire spese</span>` },
+    { label: "Dimensione Ateneo (Size)", fn: u => `<strong style="color:var(--accent-cyan); font-size:13px;">${u.qs_size || '—'}</strong>` },
+    { label: "Reputazione Accademica (AR)", fn: u => u.qs_ar_score !== null && u.qs_ar_score !== undefined ? `<strong>${Number(u.qs_ar_score).toFixed(1)}</strong>/100` : '—' },
+    { label: "Reputazione Datore Lavoro (ER)", fn: u => u.qs_er_score !== null && u.qs_er_score !== undefined ? `<strong>${Number(u.qs_er_score).toFixed(1)}</strong>/100` : '—' },
+    { label: "Studenti Internazionali (ISR)", fn: u => u.qs_isr_score !== null && u.qs_isr_score !== undefined ? `<strong>${Number(u.qs_isr_score).toFixed(1)}</strong>/100` : '—' },
+    { label: "Risultati Occupazionali (EO)", fn: u => u.qs_eo_score !== null && u.qs_eo_score !== undefined ? `<strong>${Number(u.qs_eo_score).toFixed(1)}</strong>/100` : '—' },
+    { label: "Rapporto Docenti / Studenti (FSR)", fn: u => u.qs_fsr_score !== null && u.qs_fsr_score !== undefined ? `<strong>${Number(u.qs_fsr_score).toFixed(1)}</strong>/100` : '—' },
+    { label: "Lingua Corsi Triennali (BSc)", fn: u => u.has_english_bachelor && u.has_italian_bachelor ? '🇬🇧 Inglese + 🇮🇹 Italiano' : u.has_english_bachelor ? '🇬🇧 Triennale in Inglese' : '🇮🇹 Triennale in Italiano' },
+    { label: "Test d'Ingresso & Requisiti", fn: u => `<strong style="color:var(--accent-amber)">${u.ammissione?.test_richiesto || 'Dossier'}</strong><br/><span style="font-size:10px;color:var(--text-muted);">${u.ammissione?.dettagli || ''}</span>` },
     { label: "Scadenze Domanda", fn: u => `<strong style="color:var(--accent-red)">${u.ammissione?.scadenze || 'Estate'}</strong>` },
-    { label: "Lauree Rilevanti", fn: u => (u.lauree_triennali || []).map(d => `<div style="font-size:11px;margin-bottom:3px;">• ${d.nome} (${d.lingua})</div>`).join('') },
-    { label: "Metodo Didattico", fn: u => u.approccio_didattico }
+    { label: "Lauree Triennali Rilevanti", fn: u => (u.lauree_triennali || []).map(d => `<div style="font-size:11px;margin-bottom:4px;text-align:left;">• <strong>${d.nome}</strong> (${d.lingua})<br/><span style="font-size:10px;color:var(--text-muted);">${d.focus}</span></div>`).join('') },
+    { label: "Metodo Didattico & Focus", fn: u => u.approccio_didattico }
   ];
 
   let headerHtml = `<tr><th>Caratteristica</th>`;
   unis.forEach(u => {
-    headerHtml += `<th class="uni-col">${u.bandiera} ${u.nome}</th>`;
+    headerHtml += `
+      <th class="uni-col">
+        <div style="font-size:24px; margin-bottom:4px;">${u.bandiera}</div>
+        <div class="cmp-uni-title">${u.nome}</div>
+        <div style="font-size:11px; color:var(--accent-cyan); margin-bottom:6px;">${u.citta} (${u.paese})</div>
+        <button class="cmp-btn-remove" onclick="removeFromCompare('${u.id}')" title="Rimuovi dal confronto">✕ Rimuovi</button>
+      </th>
+    `;
   });
   headerHtml += `</tr>`;
 
@@ -1031,3 +1163,271 @@ function showToast(msg) {
     el.classList.remove('show');
   }, 2800);
 }
+
+// ─── Tabella Comparativa Atenei & Export CSV ────────────────────
+function openSummaryTable() {
+  summaryTableOpen = true;
+  const modal = document.getElementById('summary-table-modal');
+  if (modal) {
+    modal.classList.add('open');
+    renderSummaryTable();
+    setTimeout(() => {
+      document.getElementById('table-quick-search')?.focus();
+    }, 150);
+  }
+}
+
+function closeSummaryTable() {
+  summaryTableOpen = false;
+  const modal = document.getElementById('summary-table-modal');
+  if (modal) modal.classList.remove('open');
+}
+
+function getActiveTableUniversities() {
+  return UNIVERSITIES.filter(u => {
+    // Rispetta i filtri attivi sulla mappa
+    const isVisibleOnMap = u._visible !== undefined ? u._visible : true;
+    if (!isVisibleOnMap) return false;
+
+    // Filtro di ricerca testuale interno alla tabella
+    if (tableSearchQuery) {
+      const q = tableSearchQuery;
+      const matchName = (u.nome || '').toLowerCase().includes(q);
+      const matchCity = (u.citta || '').toLowerCase().includes(q);
+      const matchCountry = (u.paese || '').toLowerCase().includes(q);
+      const matchSize = (u.qs_size || '').toLowerCase() === q;
+      if (!matchName && !matchCity && !matchCountry && !matchSize) return false;
+    }
+
+    return true;
+  });
+}
+
+function sortTableUniversities(list, col, asc) {
+  const SIZE_MAP = { 'S': 1, 'M': 2, 'L': 3, 'XL': 4 };
+
+  return [...list].sort((a, b) => {
+    let valA = a[col];
+    let valB = b[col];
+
+    // Trattamento speciale per colonna 'qs_size'
+    if (col === 'qs_size') {
+      const numA = SIZE_MAP[valA] || 0;
+      const numB = SIZE_MAP[valB] || 0;
+      return asc ? (numA - numB) : (numB - numA);
+    }
+
+    // Valori nulli o indefiniti
+    if (valA === undefined || valA === null) valA = typeof valB === 'number' ? -Infinity : '';
+    if (valB === undefined || valB === null) valB = typeof valA === 'number' ? -Infinity : '';
+
+    if (typeof valA === 'string' && typeof valB === 'string') {
+      const cmp = valA.localeCompare(valB, 'it', { sensitivity: 'base' });
+      return asc ? cmp : -cmp;
+    } else {
+      return asc ? (Number(valA) - Number(valB)) : (Number(valB) - Number(valA));
+    }
+  });
+}
+
+function renderSummaryTable() {
+  const tbody = document.getElementById('summary-table-body');
+  if (!tbody) return;
+
+  const rawList = getActiveTableUniversities();
+  const sortedList = sortTableUniversities(rawList, tableSortCol, tableSortAsc);
+
+  // Aggiorna contatore nel modale
+  const modalCount = document.getElementById('table-modal-count');
+  if (modalCount) {
+    modalCount.textContent = sortedList.length;
+  }
+
+  // Aggiorna indicatori visuali nelle intestazioni <th>
+  document.querySelectorAll('#summary-table th[data-sort]').forEach(th => {
+    const col = th.getAttribute('data-sort');
+    const icon = th.querySelector('.sort-icon');
+    if (col === tableSortCol) {
+      th.classList.add('active-sort');
+      if (icon) icon.textContent = tableSortAsc ? '▲' : '▼';
+    } else {
+      th.classList.remove('active-sort');
+      if (icon) icon.textContent = '⇅';
+    }
+  });
+
+  if (sortedList.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="16" style="text-align: center; padding: 40px; color: var(--text-muted);">
+          🔍 Nessun ateneo trovato con i filtri impostati. Prova ad allargare i filtri o la ricerca.
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  let html = '';
+  sortedList.forEach(u => {
+    // Formattazione Tasse
+    let tasseHtml = '';
+    if (u.tasse_anno_num === 0) {
+      tasseHtml = `<span class="table-badge-zero">0 € <small>(Gratis)</small></span>`;
+    } else {
+      tasseHtml = `<strong>${u.tasse_anno_num.toLocaleString('it-IT')} €</strong>`;
+    }
+
+    // Formattazione Costi Totali
+    const quotaTasse = Math.round(u.tasse_anno_num / 12);
+    const costiHtml = `<strong>${u.costi_totali_mese.toLocaleString('it-IT')} €</strong><span class="table-sub-note">spese + ${quotaTasse}€ tasse</span>`;
+
+    // Formattazione Stipendio Part-Time
+    const stipendioHtml = `<span>${u.stipendio_possibile.toLocaleString('it-IT')} €</span><span class="table-sub-note">~10–15h/sett</span>`;
+
+    // Formattazione Bonus Eventuali
+    let bonusHtml = '';
+    if (u.bonus_eventuali > 0) {
+      const tooltip = u.bonus_nome ? u.bonus_nome.replace(/"/g, '&quot;') : '';
+      bonusHtml = `<span style="color:var(--accent-green);font-weight:700;">+${u.bonus_eventuali.toLocaleString('it-IT')} €</span><span class="table-sub-note" title="${tooltip}">${u.bonus_nome ? (u.bonus_nome.length > 20 ? u.bonus_nome.slice(0, 20) + '…' : u.bonus_nome) : 'Borsa EU'}</span>`;
+    } else {
+      bonusHtml = `<span style="color:var(--text-muted);">—</span>`;
+    }
+
+    // Formattazione Bilancio Mese (No Genitori)
+    let bilancioHtml = '';
+    if (u.bilancio_mese_autonomo >= 0) {
+      bilancioHtml = `<span class="table-badge-surplus">+${u.bilancio_mese_autonomo.toLocaleString('it-IT')} €/m</span>`;
+    } else {
+      bilancioHtml = `<span class="table-badge-deficit">${u.bilancio_mese_autonomo.toLocaleString('it-IT')} €/m</span>`;
+    }
+
+    // Formattazione Metriche QS Excel
+    const sizeHtml = u.qs_size ? `<strong style="color:var(--accent-cyan);">${u.qs_size}</strong>` : `<span style="color:var(--text-muted);">—</span>`;
+    const fmtScore = (sc) => (sc !== null && sc !== undefined && !isNaN(sc)) ? Number(sc).toFixed(1) : '<span style="color:var(--text-muted);">—</span>';
+
+    html += `
+      <tr data-uni-id="${u.id}" title="Clicca per aprire la scheda di ${u.nome.replace(/"/g, '&quot;')} sulla mappa">
+        <td>
+          <div class="table-uni-name">
+            <span style="font-size:16px;">${u.bandiera}</span>
+            <span>${u.nome}</span>
+          </div>
+        </td>
+        <td>${u.citta}</td>
+        <td>${u.paese}</td>
+        <td class="col-num">
+          <span class="table-badge-qs" style="color:${QS_COLOR(u.qs2027)}; border:1px solid ${QS_COLOR(u.qs2027)}44;">
+            #${u.qs2027}
+          </span>
+        </td>
+        <td class="col-num">
+          <strong class="table-badge-fit" style="color:${FIT_COLOR(u.fit_score)}; font-size:13px;">
+            ${u.fit_score}
+          </strong><span style="font-size:10px; color:var(--text-muted);">/10</span>
+        </td>
+        <td class="col-num">${tasseHtml}</td>
+        <td class="col-num">${costiHtml}</td>
+        <td class="col-num">${stipendioHtml}</td>
+        <td class="col-num">${bonusHtml}</td>
+        <td class="col-num">${bilancioHtml}</td>
+        <td class="col-center">${sizeHtml}</td>
+        <td class="col-num">${fmtScore(u.qs_ar_score)}</td>
+        <td class="col-num">${fmtScore(u.qs_er_score)}</td>
+        <td class="col-num">${fmtScore(u.qs_isr_score)}</td>
+        <td class="col-num">${fmtScore(u.qs_eo_score)}</td>
+        <td class="col-num">${fmtScore(u.qs_fsr_score)}</td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+
+  // Interattività click su riga: seleziona ateneo, chiudi tabella e mostra dettagli
+  tbody.querySelectorAll('tr[data-uni-id]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const id = tr.getAttribute('data-uni-id');
+      closeSummaryTable();
+      selectUniversity(id);
+      const uni = UNIVERSITIES.find(u => u.id === id);
+      if (uni) {
+        showToast(`📍 Visualizzato sulla mappa: ${uni.nome}`);
+      }
+    });
+  });
+}
+
+function exportTableToCSV() {
+  const rawList = getActiveTableUniversities();
+  const sortedList = sortTableUniversities(rawList, tableSortCol, tableSortAsc);
+
+  if (sortedList.length === 0) {
+    showToast("⚠️ Nessuna università da esportare con i filtri correnti.");
+    return;
+  }
+
+  const headers = [
+    "Nome Ateneo",
+    "Città",
+    "Paese",
+    "Classifica QS 2027",
+    "Fit Score (su 10)",
+    "Tasse Anno (€)",
+    "Costi Totali Mese (€)",
+    "Stipendio Part-time Stima (€/mese)",
+    "Bonus e Sussidi EU (€/mese)",
+    "Dettaglio Bonus",
+    "Bilancio Mensile Autonomo (€/mese) (No Aiuti Genitori)",
+    "Dimensione Ateneo (Size)",
+    "Academic Reputation (AR Score)",
+    "Employer Reputation (ER Score)",
+    "Studenti Internazionali (ISR Score)",
+    "Risultati Occupazionali (EO Score)",
+    "Rapporto Docenti/Studenti (FSR Score)"
+  ];
+
+  const escapeCSV = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const rows = [headers.map(escapeCSV).join(';')];
+
+  sortedList.forEach(u => {
+    const row = [
+      u.nome,
+      u.citta,
+      u.paese,
+      u.qs2027,
+      u.fit_score,
+      u.tasse_anno_num,
+      u.costi_totali_mese,
+      u.stipendio_possibile,
+      u.bonus_eventuali,
+      u.bonus_nome || "Nessuno",
+      u.bilancio_mese_autonomo,
+      u.qs_size || "—",
+      (u.qs_ar_score !== null && u.qs_ar_score !== undefined) ? u.qs_ar_score : "—",
+      (u.qs_er_score !== null && u.qs_er_score !== undefined) ? u.qs_er_score : "—",
+      (u.qs_isr_score !== null && u.qs_isr_score !== undefined) ? u.qs_isr_score : "—",
+      (u.qs_eo_score !== null && u.qs_eo_score !== undefined) ? u.qs_eo_score : "—",
+      (u.qs_fsr_score !== null && u.qs_fsr_score !== undefined) ? u.qs_fsr_score : "—"
+    ];
+    rows.push(row.map(escapeCSV).join(';'));
+  });
+
+  const csvContent = "\uFEFF" + rows.join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const dateStr = new Date().toISOString().slice(0, 10);
+  a.download = `UniMap_Atenei_Filtrati_QS2027_${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast(`📥 Esportati con successo ${sortedList.length} atenei in CSV!`);
+}
+
