@@ -355,8 +355,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.3); }
   background: var(--bg-deep);
 }
 
-/* Leaflet tiles dark overlay */
-.leaflet-tile-pane { filter: brightness(0.9) saturate(0.8); }
+/* Keep the no-key OpenStreetMap tiles aligned with the dark interface. */
+.leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%) saturate(70%); }
 
 /* ─── Detail Panel (Right) ──────────────────────────────── */
 #detail-panel {

@@ -81,10 +81,9 @@ function initMap() {
     attributionControl: false
   });
 
-  // Tile: CartoDB Dark Matter per stile high-tech
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap contributors © CARTO · QS World University Rankings 2027',
-    subdomains: 'abcd',
+  // OpenStreetMap tiles do not require an API key.
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
     maxZoom: 18
   }).addTo(map);
 
